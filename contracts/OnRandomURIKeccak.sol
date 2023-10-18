@@ -9,13 +9,24 @@ import "@openzeppelin/contracts@4.6.0/utils/Counters.sol";
 import "@openzeppelin/contracts@4.6.0/utils/Strings.sol";
 import "@openzeppelin/contracts@4.6.0/utils/Base64.sol";
 
-contract OnURIUnchangeable is ERC721URIStorage, Ownable {
+contract OnRandomURIKeccak is ERC721URIStorage, Ownable {
     /**
      * @dev
      * - _tokenIdsはCountersの全関数が利用可能
      */
     using Counters for Counters.Counter;
     Counters.Counter private _tokenIds;
+
+    /**
+     * @dev
+     * 色の構造体を定義し、この配列変数colorsを定義
+     */
+    struct Color {
+        string name;
+        string code;
+    }
+
+    Color[] public colors;
 
     /**
      * @dev
@@ -27,7 +38,22 @@ contract OnURIUnchangeable is ERC721URIStorage, Ownable {
         string uri
     );
 
-    constructor() ERC721("OnURIUnchangeable", "ONU") {}
+    /**
+     * @dev
+     * 配列変数colorsに色データを登録
+     */
+    constructor() ERC721("OnRandomURIKeccak", "ONK") {
+        colors.push(Color("Yellow", "#ffff00"));
+        colors.push(Color("Whitesmoke", "#f5f5f5"));
+        colors.push(Color("Blue", "#0000ff"));
+        colors.push(Color("Pink", "#ffc0cb"));
+        colors.push(Color("Green", "#008000"));
+        colors.push(Color("Gold", "#FFD700"));
+        colors.push(Color("Purple", "#800080"));
+        colors.push(Color("Light Green", "#90EE90"));
+        colors.push(Color("Orange", "#FFA500"));
+        colors.push(Color("Gray", "#808080"));
+    }
 
     /**
      * @dev
@@ -41,12 +67,12 @@ contract OnURIUnchangeable is ERC721URIStorage, Ownable {
         _tokenIds.increment();
         uint256 newTokenId = _tokenIds.current();
 
-        string
-            memory imageData = '\
-            <svg viewBox="0 0 350 350" xmlns="http://www.w3.org/2000/svg">\
-                <polygon points="50,175 175,50 300,175 175,300" stroke="green" fill="yellow" />\
-            </svg>\
-        ';
+        bytes32 hashed = keccak256(
+            abi.encodePacked(newTokenId, block.timestamp)
+        );
+        Color memory color = colors[uint256(hashed) % colors.length];
+
+        string memory imageData = _getImage(color.code);
 
         bytes memory metadata = abi.encodePacked(
             '{"name": "',
@@ -70,5 +96,27 @@ contract OnURIUnchangeable is ERC721URIStorage, Ownable {
         _setTokenURI(newTokenId, uri);
 
         emit TokenURIChanged(_msgSender(), newTokenId, uri);
+    }
+
+    /**
+     * @dev
+     * - 引数で渡されるカラーコードを指定したSVGデータを返す
+     */
+    function _getImage(string memory colorCode)
+        internal
+        pure
+        returns (string memory)
+    {
+        return (
+            string(
+                abi.encodePacked(
+                    '<svg viewBox="0 0 350 350" xmlns="http://www.w3.org/2000/svg">',
+                    '<polygon points="50,175 175,50 300,175 175,300" stroke="green" fill="',
+                    colorCode,
+                    '" />',
+                    "</svg>"
+                )
+            )
+        );
     }
 }
